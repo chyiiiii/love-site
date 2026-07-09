@@ -7,10 +7,13 @@ const Database = require('better-sqlite3');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ==================== 数据库 ====================
-const dbPath = path.join(__dirname, 'data', 'love.db');
-fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
-fs.mkdirSync(path.join(__dirname, 'uploads'), { recursive: true });
+// ==================== 持久化数据目录 ====================
+// Railway 上通过 Volume 挂载，本地部署用默认路径
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+const dbPath = path.join(DATA_DIR, 'data', 'love.db');
+const uploadsDir = path.join(DATA_DIR, 'uploads');
+fs.mkdirSync(path.join(DATA_DIR, 'data'), { recursive: true });
+fs.mkdirSync(uploadsDir, { recursive: true });
 
 const db = new Database(dbPath, { /* verbose: console.log */ });
 
@@ -46,7 +49,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ==================== 文件上传 ====================
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, 'uploads'),
+    destination: uploadsDir,
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname) || '.jpg';
     const name = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + ext;
@@ -64,7 +67,7 @@ const upload = multer({
 
 // ==================== 静态文件 ====================
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadsDir));
 
 // ==================== API 路由 ====================
 
@@ -168,7 +171,7 @@ app.post('/api/photos/base64', (req, res) => {
     const buffer = Buffer.from(matches[2], 'base64');
     const filename = Date.now() + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
 
-    fs.writeFileSync(path.join(__dirname, 'uploads', filename), buffer);
+    fs.writeFileSync(path.join(uploadsDir, filename), buffer);
 
     const dateStr = date || new Date().toISOString().slice(0, 10);
     const stmt = db.prepare('INSERT INTO photos (filename, desc_text, date) VALUES (?, ?, ?)');
@@ -186,7 +189,7 @@ app.delete('/api/photos/:id', (req, res) => {
     const photo = db.prepare('SELECT filename FROM photos WHERE id = ?').get(req.params.id);
     if (photo) {
       // 删除文件
-      const filePath = path.join(__dirname, 'uploads', photo.filename);
+      const filePath = path.join(uploadsDir, photo.filename);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       db.prepare('DELETE FROM photos WHERE id = ?').run(req.params.id);
     }
@@ -205,7 +208,7 @@ app.post('/api/clear', (req, res) => {
     // 删除所有照片文件和记录
     const photos = db.prepare('SELECT filename FROM photos').all();
     photos.forEach(p => {
-      const fp = path.join(__dirname, 'uploads', p.filename);
+      const fp = path.join(uploadsDir, p.filename);
       if (fs.existsSync(fp)) fs.unlinkSync(fp);
     });
     db.prepare('DELETE FROM photos').run();
