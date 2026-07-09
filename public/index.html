@@ -387,6 +387,17 @@
     50% { opacity: 0.6; transform: scale(1); }
   }
 
+  /* ==================== 爱心粒子 ==================== */
+  .heart-rain { position: fixed; inset: 0; pointer-events: none; z-index: 9999; overflow: hidden; }
+  .heart {
+    position: absolute; top: -40px; font-size: 18px;
+    animation: heartFall linear forwards; opacity: 0.35;
+  }
+  @keyframes heartFall {
+    0% { transform: translateY(0) rotate(0deg) scale(1); opacity: 0.5; }
+    100% { transform: translateY(105vh) rotate(720deg) scale(0.3); opacity: 0; }
+  }
+
   /* ==================== 相册上传区域 ==================== */
   .upload-zone {
     border: 2px dashed var(--text-muted); border-radius: var(--radius);
@@ -442,6 +453,9 @@
 
 <!-- ========== Toast ========== -->
 <div class="toast" id="toast"></div>
+
+<!-- ========== 爱心雨 ========== -->
+<div class="heart-rain" id="heartRain"></div>
 
 <!-- ========== 主容器 ========== -->
 <div class="container">
@@ -931,6 +945,7 @@ async function sendMessage() {
     renderMessages();
     renderHome();
     showToast('悄悄话已发送 🌿');
+    createHearts(5);
   } catch(e) { showToast('发送失败'); }
 }
 
@@ -1056,6 +1071,25 @@ document.getElementById('modal').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 
+// ==================== 爱心粒子 ====================
+function createHearts(count = 3) {
+  const container = document.getElementById('heartRain');
+  const icons = ['🌿','🍃','✨','💫','🌟'];
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'heart';
+    el.textContent = icons[Math.floor(Math.random() * icons.length)];
+    el.style.left = Math.random() * 100 + '%';
+    el.style.fontSize = (14 + Math.random() * 18) + 'px';
+    el.style.animationDuration = (4 + Math.random() * 3) + 's';
+    el.style.opacity = 0.2 + Math.random() * 0.3;
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 7000);
+  }
+}
+
+setInterval(() => createHearts(2), 12000);
+
 // ==================== 星空 ====================
 function createStars() {
   const container = document.getElementById('stars');
@@ -1094,6 +1128,7 @@ function initAfterLoad() {
   updateSenderLabels();
   renderHome();
   renderMessages();
+  createHearts(5);
 }
 
 loadFromServer();
