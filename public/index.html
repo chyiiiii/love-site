@@ -524,6 +524,19 @@
     <div class="card">
       <div class="card-title"><span class="icon">💬</span> 写给 TA 的悄悄话</div>
       <div id="msgList" style="margin-bottom:16px;max-height:420px;overflow-y:auto;"></div>
+      <div class="form-group" style="margin-bottom:8px;">
+        <label>这条是谁发的</label>
+        <div id="senderToggle" style="display:flex;gap:8px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 14px;border-radius:8px;border:2px solid var(--green);background:var(--green);color:#fff;transition:all 0.2s;">
+            <input type="radio" name="sender" value="name1" checked style="display:none;">
+            <span id="senderLabel1">👤 TA</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:6px 14px;border-radius:8px;border:2px solid var(--olive-light);color:var(--text-light);transition:all 0.2s;">
+            <input type="radio" name="sender" value="name2" style="display:none;">
+            <span id="senderLabel2">👤 我</span>
+          </label>
+        </div>
+      </div>
       <div class="msg-input-area">
         <textarea id="msgInput" placeholder="想说的话…" rows="2"></textarea>
         <button class="btn btn-primary" onclick="sendMessage()">发送 🌿</button>
@@ -896,12 +909,33 @@ function renderPhotos() {
 }
 
 // ==================== 💬 悄悄话 ====================
+function updateSenderLabels() {
+  document.getElementById('senderLabel1').textContent = '👤 ' + data.name1;
+  document.getElementById('senderLabel2').textContent = '👤 ' + data.name2;
+}
+
+// 选中样式切换
+document.addEventListener('click', function(e) {
+  const radio = e.target.closest('label')?.querySelector('input[name="sender"]');
+  if (radio) {
+    document.querySelectorAll('#senderToggle label').forEach(l => {
+      l.style.borderColor = 'var(--olive-light)';
+      l.style.background = 'transparent';
+      l.style.color = 'var(--text-light)';
+    });
+    const parent = radio.closest('label');
+    parent.style.borderColor = 'var(--green)';
+    parent.style.background = 'var(--green)';
+    parent.style.color = '#fff';
+  }
+});
+
 async function sendMessage() {
   const text = document.getElementById('msgInput').value.trim();
   if (!text) { showToast('写点什么吧 💬'); return; }
 
-  const lastMsg = data.messages[data.messages.length - 1];
-  const sender = lastMsg && lastMsg.sender === 'name1' ? 'name2' : 'name1';
+  const selected = document.querySelector('input[name="sender"]:checked');
+  const sender = selected ? selected.value : 'name1';
   const time = formatDate(new Date()) + ' ' + formatTime(new Date());
 
   try {
@@ -1022,6 +1056,7 @@ async function saveSettings() {
   try {
     await apiPost('/api/settings', { name1, name2, startDate });
     await loadFromServer();
+    updateSenderLabels();
     renderHome();
     showToast('已保存 🌿');
   } catch(e) { showToast('保存失败'); }
@@ -1090,6 +1125,7 @@ function initAfterLoad() {
   document.getElementById('setName1').value = data.name1;
   document.getElementById('setName2').value = data.name2;
   document.getElementById('setStartDate').value = data.startDate;
+  updateSenderLabels();
   renderHome();
   renderMessages();
   createHearts(5);
