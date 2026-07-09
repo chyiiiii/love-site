@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>🌿 我们的故事</title>
 <style>
   /* ==================== 全局 ==================== */
@@ -553,14 +556,14 @@
         <input type="text" id="photoDesc" placeholder="这张照片的故事 …">
       </div>
       <label>选择照片</label>
-      <div class="upload-zone" id="uploadZone">
+      <div class="upload-zone" onclick="document.getElementById('photoFile').click()">
         <div class="uz-icon">📤</div>
         <div class="uz-text" id="uploadText">点击上传照片</div>
       </div>
-      <input type="file" id="photoFile" accept="image/*" style="display:none;">
+      <input type="file" id="photoFile" accept="image/*" onchange="onFileSelected(this)" style="display:none;">
       <div id="uploadStatus" style="font-size:13px;color:var(--text-light);margin-top:8px;display:none;"></div>
       <div style="margin-top:12px;">
-        <button class="btn btn-primary" id="savePhotoBtn">保存照片</button>
+        <button class="btn btn-primary" onclick="savePhoto()">保存照片</button>
       </div>
     </div>
     <div class="card">
@@ -628,16 +631,6 @@
 </div>
 
 <script>
-// ==================== 全局错误捕获 ====================
-window.onerror = function(msg, url, line) {
-  const el = document.getElementById('toast');
-  if (el) {
-    el.textContent = '⚠️ JS错误: ' + msg;
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 5000);
-  }
-};
-
 // ==================== 数据（云端 + localStorage 缓存） ====================
 const DB_KEY = 'love_world_data_v2';
 
@@ -845,33 +838,26 @@ function renderHomeTimeline() {
 // ==================== 📷 相册 ====================
 let selectedPhotoFile = null;
 
-// 上传区域点击触发文件选择
-document.getElementById('uploadZone').addEventListener('click', function() {
-  document.getElementById('photoFile').click();
-});
-
 // 选择文件后
-document.getElementById('photoFile').addEventListener('change', function(e) {
-  const file = e.target.files[0];
+function onFileSelected(input) {
+  const file = input.files[0];
   if (file) {
     selectedPhotoFile = file;
     document.getElementById('uploadText').textContent = '✅ 已选择: ' + file.name;
     document.getElementById('uploadStatus').style.display = 'none';
   }
-});
+}
 
 // 保存照片
-document.getElementById('savePhotoBtn').addEventListener('click', async function() {
+async function savePhoto() {
   if (!selectedPhotoFile) { showToast('请先选择一张照片 📷'); return; }
 
   const desc = document.getElementById('photoDesc').value.trim() || '我们的照片';
   const statusEl = document.getElementById('uploadStatus');
-  const btn = this;
 
   statusEl.textContent = '⏳ 上传中…';
   statusEl.style.color = 'var(--text-light)';
   statusEl.style.display = 'block';
-  btn.disabled = true;
 
   const formData = new FormData();
   formData.append('photo', selectedPhotoFile);
@@ -897,15 +883,14 @@ document.getElementById('savePhotoBtn').addEventListener('click', async function
       renderHome();
       showToast('照片已上传 📷');
     } else {
-      statusEl.innerHTML = '❌ 上传失败: ' + (json.error || '服务器返回错误');
+      statusEl.innerHTML = '❌ 错误: ' + (json.error || '未知');
       showToast('上传失败');
     }
   } catch(e) {
-    statusEl.innerHTML = '❌ 网络错误，请重试';
-    showToast('上传失败: ' + e.message);
+    statusEl.innerHTML = '❌ 网络错误';
+    showToast('上传失败');
   }
-  btn.disabled = false;
-});
+}
 
 async function deletePhoto(id) {
   if (!confirm('确定删除这张照片吗？')) return;
