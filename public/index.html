@@ -853,12 +853,19 @@ async function addPhoto() {
     const res = await fetch('/api/photos/upload', { method: 'POST', body: formData });
     const json = await res.json();
     if (json.success) {
+      // 直接把新照片添加到本地数据，不用重新加载
+      data.photos.unshift({
+        id: json.id,
+        filename: json.filename,
+        desc_text: desc,
+        date: json.date,
+      });
       document.getElementById('photoDesc').value = '';
       fileInput.value = '';
-      showToast('照片已上传 📷');
-      await loadFromServer();
+      try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch(e) {}
       renderPhotos();
       renderHome();
+      showToast('照片已上传 📷');
     } else {
       showToast('上传失败: ' + (json.error || '未知错误'));
     }
