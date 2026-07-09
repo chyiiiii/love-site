@@ -553,13 +553,14 @@
         <input type="text" id="photoDesc" placeholder="这张照片的故事 …">
       </div>
       <label>选择照片</label>
-      <div class="upload-zone" onclick="document.getElementById('photoFile').click()">
+      <div class="upload-zone" id="uploadZone">
         <div class="uz-icon">📤</div>
-        <div class="uz-text">点击上传照片</div>
+        <div class="uz-text" id="uploadText">点击上传照片</div>
       </div>
       <input type="file" id="photoFile" accept="image/*" style="display:none;">
+      <div id="uploadStatus" style="font-size:13px;color:var(--text-light);margin-top:8px;display:none;"></div>
       <div style="margin-top:12px;">
-        <button class="btn btn-primary" onclick="addPhoto()">保存照片</button>
+        <button class="btn btn-primary" id="savePhotoBtn">保存照片</button>
       </div>
     </div>
     <div class="card">
@@ -832,47 +833,63 @@ function renderHomeTimeline() {
 }
 
 // ==================== 📷 相册 ====================
-document.getElementById('photoFile').addEventListener('change', function(e) {
-  // 选择后就自动触发上传预览（真正上传在点击保存时）
-  // 不做 base64 读取了，改用 FormData 上传
-  const file = e.target.files[0];
-  if (file) showToast('已选择照片 ✅');
+let selectedPhotoFile = null;
+
+document.getElementById('uploadZone').addEventListener('click', function() {
+  document.getElementById('photoFile').click();
 });
 
-async function addPhoto() {
+document.getElementById('photoFile').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    selectedPhotoFile = file;
+    document.getElementById('uploadText').textContent = '✅ 已选择: ' + file.name;
+    document.getElementById('uploadStatus').style.display = 'none';
+  }
+});
+
+document.getElementById('savePhotoBtn').addEventListener('click', async function() {
+  if (!selectedPhotoFile) { showToast('请先选择一张照片 📷'); return; }
+
   const desc = document.getElementById('photoDesc').value.trim() || '我们的照片';
-  const fileInput = document.getElementById('photoFile');
-  const file = fileInput.files[0];
-  if (!file) { showToast('请先选择一张照片 📷'); return; }
+  const statusEl = document.getElementById('uploadStatus');
+  statusEl.textContent = '⏳ 上传中…';
+  statusEl.style.display = 'block';
+  this.disabled = true;
 
   const formData = new FormData();
-  formData.append('photo', file);
+  formData.append('photo', selectedPhotoFile);
   formData.append('desc', desc);
 
   try {
     const res = await fetch('/api/photos/upload', { method: 'POST', body: formData });
     const json = await res.json();
     if (json.success) {
-      // 直接把新照片添加到本地数据，不用重新加载
       data.photos.unshift({
         id: json.id,
         filename: json.filename,
         desc_text: desc,
         date: json.date,
       });
-      document.getElementById('photoDesc').value = '';
-      fileInput.value = '';
       try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch(e) {}
+      document.getElementById('photoDesc').value = '';
+      selectedPhotoFile = null;
+      document.getElementById('photoFile').value = '';
+      document.getElementById('uploadText').textContent = '点击上传照片';
+      statusEl.style.display = 'none';
       renderPhotos();
       renderHome();
       showToast('照片已上传 📷');
     } else {
-      showToast('上传失败: ' + (json.error || '未知错误'));
+      statusEl.textContent = '❌ 上传失败: ' + (json.error || '未知错误');
+      showToast('上传失败');
     }
   } catch(e) {
-    showToast('上传失败，请检查网络');
+    statusEl.textContent = '❌ 上传失败，请检查网络';
+    showToast('上传失败');
   }
-}
+  this.disabled = false;
+});
 
 async function deletePhoto(id) {
   if (!confirm('确定删除这张照片吗？')) return;
