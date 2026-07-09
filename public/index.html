@@ -628,6 +628,16 @@
 </div>
 
 <script>
+// ==================== 全局错误捕获 ====================
+window.onerror = function(msg, url, line) {
+  const el = document.getElementById('toast');
+  if (el) {
+    el.textContent = '⚠️ JS错误: ' + msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 5000);
+  }
+};
+
 // ==================== 数据（云端 + localStorage 缓存） ====================
 const DB_KEY = 'love_world_data_v2';
 
@@ -835,10 +845,12 @@ function renderHomeTimeline() {
 // ==================== 📷 相册 ====================
 let selectedPhotoFile = null;
 
+// 上传区域点击触发文件选择
 document.getElementById('uploadZone').addEventListener('click', function() {
   document.getElementById('photoFile').click();
 });
 
+// 选择文件后
 document.getElementById('photoFile').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (file) {
@@ -848,14 +860,18 @@ document.getElementById('photoFile').addEventListener('change', function(e) {
   }
 });
 
+// 保存照片
 document.getElementById('savePhotoBtn').addEventListener('click', async function() {
   if (!selectedPhotoFile) { showToast('请先选择一张照片 📷'); return; }
 
   const desc = document.getElementById('photoDesc').value.trim() || '我们的照片';
   const statusEl = document.getElementById('uploadStatus');
+  const btn = this;
+
   statusEl.textContent = '⏳ 上传中…';
+  statusEl.style.color = 'var(--text-light)';
   statusEl.style.display = 'block';
-  this.disabled = true;
+  btn.disabled = true;
 
   const formData = new FormData();
   formData.append('photo', selectedPhotoFile);
@@ -873,22 +889,22 @@ document.getElementById('savePhotoBtn').addEventListener('click', async function
       });
       try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch(e) {}
       document.getElementById('photoDesc').value = '';
-      selectedPhotoFile = null;
       document.getElementById('photoFile').value = '';
+      selectedPhotoFile = null;
       document.getElementById('uploadText').textContent = '点击上传照片';
       statusEl.style.display = 'none';
       renderPhotos();
       renderHome();
       showToast('照片已上传 📷');
     } else {
-      statusEl.textContent = '❌ 上传失败: ' + (json.error || '未知错误');
+      statusEl.innerHTML = '❌ 上传失败: ' + (json.error || '服务器返回错误');
       showToast('上传失败');
     }
   } catch(e) {
-    statusEl.textContent = '❌ 上传失败，请检查网络';
-    showToast('上传失败');
+    statusEl.innerHTML = '❌ 网络错误，请重试';
+    showToast('上传失败: ' + e.message);
   }
-  this.disabled = false;
+  btn.disabled = false;
 });
 
 async function deletePhoto(id) {
